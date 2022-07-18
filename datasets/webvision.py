@@ -1,0 +1,135 @@
+#https://github.com/LiJunnan1992/DivideMix/blob/master/dataloader_webvision.py
+from torch.utils.data import Dataset, DataLoader
+import torchvision.transforms as transforms
+import random
+import numpy as np
+from PIL import Image
+import torch
+import os
+from mypath import Path
+
+class webvision_dataset(Dataset): 
+    def __init__(self, transform, mode, num_classes=50, cont=False, transform_unsup=None, contrastive=False):
+        self.root = Path.db_root_dir("webvision")
+        self.transform = transform
+        self.mode = mode
+        self.num_classes = num_classes
+        self.cont = cont
+        self.contrastive = contrastive
+        self.transform_unsup = transform_unsup
+        
+        if self.mode=='test':
+            with open(self.root+'info/val_filelist.txt') as f:
+                lines=f.readlines()
+            self.val_imgs = []
+            self.val_labels = []
+            for line in lines:
+                img, target = line.split()
+                target = int(target)
+                if target<self.num_classes:
+                    self.val_imgs.append(img)
+                    self.val_labels.append(target)
+        else:    
+            with open(self.root+'info/train_filelist_google.txt') as f:
+                lines=f.readlines()    
+            train_imgs = []
+            self.targets = []
+            for line in lines:
+                img, target = line.split()
+                target = int(target)
+                if target<self.num_classes:
+                    train_imgs.append(img)
+                    self.targets.append(target)
+            self.data = train_imgs
+        
+            self.clean_noisy = torch.ones(len(self.data))
+            self.targets = np.array(self.targets)
+                    
+    def __getitem__(self, index):
+        if self.mode=='train':
+            img_path = self.data[index]
+            target = self.targets[index]
+            image = Image.open(self.root+img_path)#.convert('RGB')
+            img = self.transform(image)
+            if self.contrastive:
+                img_ = self.transform(image)
+            else:
+                img_ = img
+            sample = {'image':img, 'image_':img_, 'target':target, 'index':index, 'clean_noisy':self.clean_noisy[index]}
+            if self.cont:
+                sample['image1'] = self.transform_unsup(image)
+                sample['image2'] = self.transform_unsup(image)
+            return sample
+        elif self.mode=='test':
+            img_path = self.val_imgs[index]
+            target = self.val_labels[index]
+            image = Image.open(self.root+'val_images_256/'+img_path).convert('RGB')
+            img = self.transform(image) 
+            return {'image':img, 'target':target, 'index':index}
+           
+    def __len__(self):
+        if self.mode!='test':
+            return len(self.data)
+        else:
+            return len(self.val_imgs)    
+
+
+class webvision_dataloader():  
+    def __init__(self, batch_size, num_class, num_workers, root_dir, log):
+
+        self.batch_size = batch_size
+        self.num_class = num_class
+        self.num_workers = num_workers
+        self.root_dir = root_dir
+        self.log = log
+
+        self.transform_train = transforms.Compose([
+            #transforms.Resize(256),
+            transforms.CenterCrop(227),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406),(0.229, 0.224, 0.225)),
+        ]) 
+        self.transform_test = transforms.Compose([
+            #transforms.Resize(256),
+            transforms.CenterCrop(227),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406),(0.229, 0.224, 0.225)),
+        ])  
+        self.transform_imagenet = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(227),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406),(0.229, 0.224, 0.225)),
+        ])         
+
+    def run(self,mode,pred=[],prob=[]):
+        if mode=='train':
+            all_dataset = webvision_dataset(root_dir=self.root_dir, transform=self.transform_train, mode="train", num_class=self.num_class)                
+            trainloader = DataLoader(
+                dataset=all_dataset, 
+                batch_size=self.batch_size*2,
+                shuffle=True,
+                num_workers=self.num_workers,
+                pin_memory=True)                 
+            return trainloader
+                                             
+        elif mode=='test':
+            test_dataset = webvision_dataset(root_dir=self.root_dir, transform=self.transform_test, mode='test', num_class=self.num_class)      
+            test_loader = DataLoader(
+                dataset=test_dataset, 
+                batch_size=self.batch_size*20,
+                shuffle=False,
+                num_workers=self.num_workers,
+                pin_memory=True)               
+            return test_loader
+        
+        elif mode=='imagenet':
+            imagenet_val = imagenet_dataset(root_dir=self.root_dir, transform=self.transform_imagenet, num_class=self.num_class)      
+            imagenet_loader = DataLoader(
+                dataset=imagenet_val, 
+                batch_size=self.batch_size*20,
+                shuffle=False,
+                num_workers=self.num_workers,
+                pin_memory=True)               
+            return imagenet_loader     
