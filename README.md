@@ -50,3 +50,13 @@ CUDA_VISIBLE_DEVICES=0 python main_sup.py --dataset cifar100 --ood-noise 0.2 --i
 ```
 
 The file train.sh lists commands to run the algorithm
+
+# Cite us if we helped your research
+```
+@inproceedings{2022_ECCV_SNCF,
+  title="{Addressing out-of-distribution label noise in webly-labelled data}",
+  author="Paul Albert and Eric Arazo and Noel O'Connor and Kevin McGuinness",
+  booktitle="{European Conference on Computer Vision (ECCV)}",
+  year="2022"
+}
+```
