@@ -5,12 +5,14 @@ Paper (ECCV 2022): [SNCF](https://arxiv.org/pdf/2207.01573)
 ![](https://github.com/PaulAlbert31/SNCF/blob/main/SNCF.png)
 
 # Install requirements using conda (cuda version 10.2)
+```
 conda env create -f environment.yml
 conda activate sncf
-
+```
 # Edit the mypath.py file
 mypath.py lists the location of the datasets
 For the Places365 dataset, we use the small images (256x256) test set available at http://places2.csail.mit.edu/download.html (4.4G)
+
 For ImageNet32 see https://patrykchrabaszcz.github.io/Imagenet32/
 
 # Pretrained unsupervised weights and noise clustering
@@ -36,7 +38,7 @@ For higher separations you could visualize using [Umap](umap-learn.readthedocs.i
 ```
 CUDA_VISIBLE_DEVICES=0 python main_unsup.py --dataset cifar100 --ood-noise 0.2 --id-noise 0.0 --epochs 2000 --batch-size 256 --net preresnet18 --lr 0.01 --steps 1000 1500 --seed 1 --exp-name cifar100_test_unsup --proj-size 128 --mixup
 ```
-Note that there is no point in adding in-distribution noise here since the algorithm is unsupervised
+There is no point in adding in-distribution noise here since the algorithm is unsupervised
 
 ## Phase 2 - extract the clusters
 ```
